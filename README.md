@@ -1,1 +1,1 @@
-# homework/bot
+# homework-bot
