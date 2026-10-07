@@ -1,8 +1,7 @@
 BOT_TOKEN = ""
 BACKEND_URL = ""
 
-# my bot use the proxy
-# delete, if you don’t need it
+# if require proxy, use
 PROXY_ENABLED = False
 PROXY_URL = ""
 PROXY_SECRET = ""

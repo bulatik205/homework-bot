@@ -3,9 +3,24 @@
 
 import requests
 import telebot
-from config import BOT_TOKEN, BACKEND_URL
+from config import (
+    BOT_TOKEN, BACKEND_URL,
+    PROXY_ENABLED, PROXY_URL, PROXY_SECRET,
+)
 
 bot = telebot.TeleBot(BOT_TOKEN)
+
+
+def call_backend(path: str) -> str:
+    if PROXY_ENABLED:
+        r = requests.get(
+            PROXY_URL,
+            params={"secret": PROXY_SECRET, "path": path},
+            timeout=15,
+        )
+    else:
+        r = requests.get(BACKEND_URL + path, timeout=15)
+    return r.text
 
 
 @bot.message_handler(commands=["start"])
@@ -16,8 +31,8 @@ def start(message):
 @bot.message_handler(commands=["ping"])
 def ping(message):
     try:
-        r = requests.get(BACKEND_URL + "/api/v1/ping", timeout=10)
-        bot.send_message(message.chat.id, r.text)
+        text = call_backend("/api/v1/ping")
+        bot.send_message(message.chat.id, text)
     except Exception as e:
         bot.send_message(message.chat.id, f"Ошибка: {e}")
 
