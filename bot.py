@@ -5,14 +5,13 @@ import html
 import re
 import requests
 import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from datetime import datetime, timedelta
 from config import BOT_TOKEN, BACKEND_URL, PROXY_ENABLED, PROXY_URL, PROXY_SECRET
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
 WEB_URL = "https://hw.bulatik.website"
-
 
 def call_backend(path: str) -> dict:
     if PROXY_ENABLED:
@@ -124,7 +123,7 @@ def human_days(n: int) -> str:
 
 def web_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton("🌐 Открыть веб", url=WEB_URL))
+    kb.add(InlineKeyboardButton("🏝️ Сайт", web_app=WebAppInfo(url=WEB_URL)))
     return kb
 
 
@@ -218,16 +217,18 @@ def show_tomorrow(message):
     lines = [f"🏎️ <b>Завтра</b> · <i>{e(fmt_date_human(date_str))}</i>", ""]
 
     for key, tasks in groups.items():
-        lines.append(f"🧸 <b>{e(subject_display(key))}</b>")
+        first = tasks[0]
+        if first.get("instead_of"):
+            header = (
+                f"🧸 <b>{e(subject_display(first['subject']))}</b> "
+                f"(вместо <u>{e(subject_display(first['instead_of']))}</u>)"
+            )
+        else:
+            header = f"🧸 <b>{e(subject_display(key))}</b>"
+
+        lines.append(header)
         for t in tasks:
-            if t.get("instead_of"):
-                lines.append(
-                    f"<blockquote>🔄 <b>{e(subject_display(t['subject']))}</b> "
-                    f"<i>(вместо {e(subject_display(t['instead_of']))})</i>\n"
-                    f"{e(t['task'])}</blockquote>"
-                )
-            else:
-                lines.append(f"<blockquote>{e(t['task'])}</blockquote>")
+            lines.append(f"\n<blockquote><code>{e(t['task'])}</code></blockquote>")
         lines.append("")
 
     bot.send_message(
@@ -286,7 +287,7 @@ def show_subject(message, query: str):
     if t.get("instead_of"):
         header += f" <i>(вместо {e(subject_display(t['instead_of']))})</i>"
 
-    lines = [header, "", f"<blockquote>{e(t['task'])}</blockquote>"]
+    lines = [header, "", f"<blockquote><code>{e(t['task'])}</code></blockquote>"]
 
     if t.get("date_to"):
         d = days_until(t["date_to"])
