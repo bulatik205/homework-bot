@@ -5,10 +5,14 @@ import html
 import re
 import requests
 import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from datetime import datetime, timedelta
 from config import BOT_TOKEN, BACKEND_URL, PROXY_ENABLED, PROXY_URL, PROXY_SECRET
 
 bot = telebot.TeleBot(BOT_TOKEN)
+
+WEB_URL = "https://hw.bulatik.website"
+
 
 def call_backend(path: str) -> dict:
     if PROXY_ENABLED:
@@ -21,6 +25,7 @@ def call_backend(path: str) -> dict:
         r = requests.get(BACKEND_URL + path, timeout=15)
     r.raise_for_status()
     return r.json()
+
 
 SUBJECT_NAMES = {
     "math": "Алгебра",
@@ -70,6 +75,7 @@ def subject_display(code: str) -> str:
 def e(s) -> str:
     return html.escape(str(s if s is not None else ""))
 
+
 MONTHS_SHORT = [
     "янв", "фев", "мар", "апр", "мая", "июн",
     "июл", "авг", "сен", "окт", "ноя", "дек",
@@ -115,6 +121,13 @@ def human_days(n: int) -> str:
         return "вчера"
     return f"{-n} дн. назад"
 
+
+def web_kb() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton("🌐 Открыть веб", url=WEB_URL))
+    return kb
+
+
 @bot.message_handler(commands=["start"])
 def start(message):
     text = (
@@ -124,22 +137,30 @@ def start(message):
         "• <code>@дз мат</code> — последнее ДЗ по предмету\n\n"
         "<i>Сокращения: алг, геом, геог, рус, лит, ист, физ, хим, био, англ, общ, инф, физра, обж, тех, вер, проект</i>"
     )
-    bot.send_message(message.chat.id, text, parse_mode="HTML")
+    bot.send_message(message.chat.id, text, parse_mode="HTML", reply_markup=web_kb())
+
 
 @bot.message_handler(commands=["ping"])
 def ping(message):
     try:
         data = call_backend("/api/v1/ping")
         if data.get("success"):
-            bot.send_message(message.chat.id, "pong 🏓", parse_mode="HTML")
+            bot.send_message(message.chat.id, "pong 🏓", parse_mode="HTML", reply_markup=web_kb())
         else:
             bot.send_message(
                 message.chat.id,
                 f"⚠️ Ошибка: {e(data.get('error', 'unknown'))}",
                 parse_mode="HTML",
+                reply_markup=web_kb(),
             )
     except Exception as ex:
-        bot.send_message(message.chat.id, f"⚠️ Ошибка: {e(ex)}", parse_mode="HTML")
+        bot.send_message(
+            message.chat.id,
+            f"⚠️ Ошибка: {e(ex)}",
+            parse_mode="HTML",
+            reply_markup=web_kb(),
+        )
+
 
 DZ_RE = re.compile(r"^@дз\s*(?:#\s*)?(.*)$", re.IGNORECASE)
 
@@ -162,7 +183,12 @@ def show_tomorrow(message):
     try:
         data = call_backend(f"/api/v1/tasks?date={date_str}")
     except Exception as ex:
-        bot.send_message(message.chat.id, f"⚠️ Ошибка: {e(ex)}", parse_mode="HTML")
+        bot.send_message(
+            message.chat.id,
+            f"⚠️ Ошибка: {e(ex)}",
+            parse_mode="HTML",
+            reply_markup=web_kb(),
+        )
         return
 
     if not data.get("success"):
@@ -170,6 +196,7 @@ def show_tomorrow(message):
             message.chat.id,
             f"⚠️ Ошибка: {e(data.get('error', 'unknown'))}",
             parse_mode="HTML",
+            reply_markup=web_kb(),
         )
         return
 
@@ -179,6 +206,7 @@ def show_tomorrow(message):
             message.chat.id,
             f"👻 <b>На завтра</b> ({e(fmt_date_human(date_str))}) заданий нет.",
             parse_mode="HTML",
+            reply_markup=web_kb(),
         )
         return
 
@@ -194,15 +222,20 @@ def show_tomorrow(message):
         for t in tasks:
             if t.get("instead_of"):
                 lines.append(
-                    f"   🔄 {e(subject_display(t['subject']))} "
+                    f"<blockquote>🔄 <b>{e(subject_display(t['subject']))}</b> "
                     f"<i>(вместо {e(subject_display(t['instead_of']))})</i>\n"
-                    f"   • {e(t['task'])}"
+                    f"{e(t['task'])}</blockquote>"
                 )
             else:
-                lines.append(f"   • {e(t['task'])}")
+                lines.append(f"<blockquote>{e(t['task'])}</blockquote>")
         lines.append("")
 
-    bot.send_message(message.chat.id, "\n".join(lines).rstrip(), parse_mode="HTML")
+    bot.send_message(
+        message.chat.id,
+        "\n".join(lines).rstrip(),
+        parse_mode="HTML",
+        reply_markup=web_kb(),
+    )
 
 
 def show_subject(message, query: str):
@@ -213,13 +246,19 @@ def show_subject(message, query: str):
             f"🤔 Не знаю предмет «<b>{e(query)}</b>».\n"
             f"<i>Попробуй: алг, геом, геог, рус, лит, ист, физ, хим, био, англ, общ, инф</i>",
             parse_mode="HTML",
+            reply_markup=web_kb(),
         )
         return
 
     try:
         data = call_backend(f"/api/v1/tasks?subject={code}&recency=last")
     except Exception as ex:
-        bot.send_message(message.chat.id, f"⚠️ Ошибка: {e(ex)}", parse_mode="HTML")
+        bot.send_message(
+            message.chat.id,
+            f"⚠️ Ошибка: {e(ex)}",
+            parse_mode="HTML",
+            reply_markup=web_kb(),
+        )
         return
 
     if not data.get("success"):
@@ -227,6 +266,7 @@ def show_subject(message, query: str):
             message.chat.id,
             f"⚠️ Ошибка: {e(data.get('error', 'unknown'))}",
             parse_mode="HTML",
+            reply_markup=web_kb(),
         )
         return
 
@@ -236,6 +276,7 @@ def show_subject(message, query: str):
             message.chat.id,
             f"💕 <b>{e(subject_display(code))}</b>\n\n<i>Заданий нет.</i>",
             parse_mode="HTML",
+            reply_markup=web_kb(),
         )
         return
 
@@ -245,14 +286,20 @@ def show_subject(message, query: str):
     if t.get("instead_of"):
         header += f" <i>(вместо {e(subject_display(t['instead_of']))})</i>"
 
-    lines = [header, "", f"💎 {e(t['task'])}"]
+    lines = [header, "", f"<blockquote>{e(t['task'])}</blockquote>"]
 
     if t.get("date_to"):
         d = days_until(t["date_to"])
         tail = f" ({e(human_days(d))})" if d is not None else ""
         lines.append(f"\n🍌 <b>На</b> {e(fmt_date_human(t['date_to']))}{tail}")
 
-    bot.send_message(message.chat.id, "\n".join(lines), parse_mode="HTML") 
+    bot.send_message(
+        message.chat.id,
+        "\n".join(lines),
+        parse_mode="HTML",
+        reply_markup=web_kb(),
+    )
+
 
 if __name__ == "__main__":
     print("Bot started")
