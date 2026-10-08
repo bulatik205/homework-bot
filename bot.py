@@ -132,8 +132,8 @@ def start(message):
     text = (
         "👋 <b>Привет!</b>\n\n"
         "Я показываю домашку:\n"
-        "• <code>@дз</code> — что задано на <b>завтра</b>\n"
-        "• <code>@дз мат</code> — последнее ДЗ по предмету\n\n"
+        "<blockquote><code>@дз</code> — что задано на <b>завтра</b>\n"
+        "<code>@дз мат</code> — последнее ДЗ по предмету</blockquote>\n\n"
         "<i>Сокращения: алг, геом, геог, рус, лит, ист, физ, хим, био, англ, общ, инф, физра, обж, тех, вер, проект</i>"
     )
     bot.send_message(message.chat.id, text, parse_mode="HTML", reply_markup=web_kb())
@@ -203,7 +203,7 @@ def show_tomorrow(message):
     if not items:
         bot.send_message(
             message.chat.id,
-            f"👻 <b>На завтра</b> ({e(fmt_date_human(date_str))}) заданий нет.",
+            f"👻 <b>На завтра</b> ({e(fmt_date_human(date_str))}) заданий я не нашел...",
             parse_mode="HTML",
             reply_markup=web_kb(),
         )
@@ -275,7 +275,7 @@ def show_subject(message, query: str):
     if not items:
         bot.send_message(
             message.chat.id,
-            f"💕 <b>{e(subject_display(code))}</b>\n\n<i>Заданий нет.</i>",
+            f"💕 <b>{e(subject_display(code))}</b>\n\n<i>Я не нашел задания</i>",
             parse_mode="HTML",
             reply_markup=web_kb(),
         )
