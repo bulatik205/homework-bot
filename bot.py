@@ -304,4 +304,4 @@ def show_subject(message, query: str):
 
 if __name__ == "__main__":
     print("Bot started")
-    bot.infinity_polling(timeout=30, long_polling_timeout=25)
+    bot.infinity_polling(timeout=30, long_polling_timeout=25, none_stop=True)
